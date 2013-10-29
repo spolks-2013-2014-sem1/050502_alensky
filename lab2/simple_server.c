@@ -66,15 +66,8 @@ int main(int argc, char *argv[])
 int createSocket()
 {
     int _socket;
-    int sock_type;
-    int _af_domen;
 
-
-    _af_domen = AF_INET;
-    sock_type = SOCK_STREAM; // protocol is TCP ( by default )
-
-
-    _socket = socket( _af_domen, sock_type, 0 );
+    _socket = socket( AF_INET, SOCK_STREAM, 0 );
 
     if( _socket < 0 )
     {

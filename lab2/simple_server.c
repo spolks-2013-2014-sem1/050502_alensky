@@ -8,155 +8,112 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 
-int createSocket( const char * af_domen, const char * protocol);
-void bindSocket(int _socket, struct sockaddr_in* addr,const char * af_domen, const char * port );
+int createSocket();
+void bindSocket(int _socket, struct sockaddr_in* addr, const char * port );
 char* getClientInfo( struct hostent clientInfo );
 void error(char *msg);
 
 int main(int argc, char *argv[])
 {
-        int client, listener, countOfAccesibleClients = 0;
-        int accepted_bytes;
-		struct sockaddr_in addr;
-        struct sockaddr_in clientaddr;
-        struct hostent* clientInfo;
-        char accepted_data[1024];
-        char *clientInfoName;
-        
-        if (argc < 2)
+    int client, listener;
+    int accepted_bytes;
+    struct sockaddr_in addr;
+    struct sockaddr_in clientaddr;
+    struct hostent* clientInfo;
+    char accepted_data[1024];
+    char *clientInfoName;
+
+    if (argc < 2)
+    {
+        error("ERROR, no parametres provided");
+    }
+
+    listener = createSocket();
+
+    bindSocket( listener, &addr, argv[1]);
+    printf("Starts at port %s", argv[1]);
+    fflush(stdout);
+    listen(listener, 1);
+
+    while(1)
+    {
+        clientaddr.sin_family = AF_INET;
+
+        socklen_t client_addr_len = sizeof( clientaddr );
+
+        client = accept(listener, (struct sockaddr*)& clientaddr, &client_addr_len );
+        if( client < 0 )
         {
-                error("ERROR, no parametres provided");
+            continue;
         }
-
-        listener = createSocket( argv[1], argv[2]);
-        
-        bindSocket( listener, &addr, argv[1], argv[3] );
-		printf("Starts at port %s", argv[3]);
-		fflush(stdout);
-        countOfAccesibleClients = atoi(argv[4]);
-        listen(listener, countOfAccesibleClients);
-
+        clientInfo = gethostbyaddr( &clientaddr.sin_addr, sizeof ( struct in_addr ) , AF_INET);
+        clientInfoName = getClientInfo(*clientInfo);
+        send(client, clientInfoName, strlen( clientInfoName ), 0);
         while(1)
-		{
-					clientaddr.sin_family = AF_INET;
+        {
+            accepted_bytes = recv(client, accepted_data, 1024, 0);
+            if( accepted_bytes <= 0) break;
+            send(client, accepted_data, accepted_bytes, 0);
+        }
+        free(clientInfoName);
+        close(client);
+    }
 
-					socklen_t client_addr_len = sizeof( clientaddr );
-					
-					client = accept(listener, (struct sockaddr*)& clientaddr, &client_addr_len );
-					if( client < 0 )
-					{
-							continue;
-					}
-					clientInfo = gethostbyaddr( &clientaddr.sin_addr, sizeof ( struct in_addr ) , AF_INET);
-					clientInfoName = getClientInfo(*clientInfo);
-					send(client, clientInfoName, strlen( clientInfoName ), 0);
-					while(1)
-					{
-						accepted_bytes = recv(client, accepted_data, 1024, 0);
-						if( accepted_bytes <= 0) break;
-						send(client, accepted_data, accepted_bytes, 0);
-					}
-			free(clientInfoName);
-			close(client);
-		}
-
-        close(listener);
-        return 1;
+    close(listener);
+    return 1;
 }
 
-int createSocket( const char * af_domen, const char * protocol)
+int createSocket()
 {
-        int _socket;
-        int sock_type;
-        int _af_domen;
-        
-        if(af_domen == NULL )
-        {
-                error( "ERROR, impossible to create socket" );
-        }
-        
-        if( !strcmp( af_domen, "INET" ) )
-        {
-                _af_domen = AF_INET;
-                sock_type = SOCK_STREAM;        // protocol is TCP ( by default )
-                
-                if( protocol != NULL)
-                {
-                        if( !strcmp(protocol,"UDP") )
-                        {
-                                sock_type = SOCK_DGRAM;
-                        }
-                        
-                        if( !strcmp(protocol,"IP") )
-                        {
-                                sock_type = SOCK_RAW;
-                        }
-                }
-        }
-        
-        if( !strcmp( af_domen, "UNIX" ) )
-        {
-                _af_domen = AF_UNIX;
-                sock_type = SOCK_STREAM;        // the only available value for UNIX adress family
-        }
-        
-        _socket = socket( _af_domen, sock_type, 0 );
-        
-        if( _socket < 0 )
-        {
-                error( "ERROR, impossible to create socket" );
-        }
-        
-        return _socket;
+    int _socket;
+
+    _socket = socket( AF_INET, SOCK_STREAM, 0 );
+
+    if( _socket < 0 )
+    {
+        error( "ERROR, impossible to create socket" );
+    }
+
+    return _socket;
 }
 
-void bindSocket(int _socket, struct sockaddr_in* addr,const char * af_domen, const char * port )
+void bindSocket(int _socket, struct sockaddr_in* addr, const char * port )
 {
-        if( af_domen == NULL )
+    addr->sin_family = AF_INET;
+
+    if( port == NULL )
+    {
+        error("Error, port is not pointed");
+    }
+    else
+    {
+        if( ( addr->sin_port = htons( atoi(port) ) ) == 0)
         {
-                error( "ERROR, impossible to bind socket" );
+            error( "Error, port is not valid!" );
         }
-        
-        if( !strcmp( af_domen, "INTERNET" ) )
-        {
-                addr->sin_family = AF_INET;
-        }
-        
-        if( !strcmp( af_domen, "UNIX" ) )
-        {
-                addr->sin_family = AF_UNIX;
-        }
-        
-        if( port == NULL )
-        {
-                error("Error, port is not pointed");
-        }
-        else
-        {
-                addr->sin_port = htons( atoi(port) );
-        }
-        
-		addr->sin_addr.s_addr = htonl( INADDR_ANY );
-        
-        if( bind( _socket,(struct sockaddr *) addr, sizeof( *addr ) ) < 0 )
-        {
-                error( "ERROR, impossible to bind socket" );
-        }
+    }
+
+    addr->sin_addr.s_addr = htonl( INADDR_ANY );
+
+    if( bind( _socket,(struct sockaddr *) addr, sizeof( *addr ) ) < 0 )
+    {
+        error( "ERROR, impossible to bind socket" );
+    }
 }
 
 char* getClientInfo( struct hostent clientInfo )
 {
-        char *preInfo = "Your are ";
-        char *postInfo = "\nType something (Echo server is working)\n";
-        char* info = ( char* ) malloc( sizeof(char) * ( strlen( preInfo ) + strlen ( clientInfo.h_name ) + strlen( postInfo ) + 1 ) );
-        strcpy( info, preInfo);
-        strcat(info, clientInfo.h_name);
-        strcat(info, postInfo);
-        return info;
+    char *preInfo = "Your are ";
+    char *postInfo = "\nType something (Echo server is working)\n";
+    char* info = ( char* ) malloc( sizeof(char) * ( strlen( preInfo ) + strlen ( clientInfo.h_name ) + strlen( postInfo ) + 1 ) );
+    strcpy( info, preInfo);
+    strcat(info, clientInfo.h_name);
+    strcat(info, postInfo);
+    return info;
 }
 
 void error(char *msg)
 {
-  perror(msg);
-  exit(1);
+    perror(msg);
+    exit(1);
 }

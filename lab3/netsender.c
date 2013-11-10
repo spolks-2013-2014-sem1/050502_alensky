@@ -24,10 +24,12 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netdb.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
 
@@ -48,39 +50,48 @@ int createSocket()
     return _socket;
 }
 
-void bindSocket(int _socket, struct sockaddr_in* addr_in, const char* addr,const char * port )
+void bindAddr(struct sockaddr_in* addr_in, const char* addr,const char * port )
 {
 
     addr_in->sin_family = AF_INET;
 	
-	if( !strcmp(addr, "-l") || !strcmp(addr, "-lchst") )
-	{
-		addr = "0.0.0.0";
-	}
-
 	if( port == NULL )
     {
         error("Error, port is not provided");
     }
 
-	if (inet_pton(AF_INET ,addr, &(addr_in->sin_addr) ) <= 0 )
-	{
-		error( "Error, address is not valid!" );
-	}
 
 	if( ( addr_in->sin_port = htons( atoi(port) ) ) == 0)
     {
 		error( "Error, port is not valid!" );
     }
-
-    if( bind( _socket,(struct sockaddr *) addr_in, sizeof( *addr_in ) ) < 0 )
-    {
-        error( "ERROR, impossible to bind socket" );
-    }
+    
+    if( !strcmp(addr, "-l") )
+	{
+		addr_in->sin_addr.s_addr = htonl(INADDR_ANY);
+		return;
+	}
+	
+	if( !strcmp(addr, "-lchst") )
+	{
+		addr_in->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+		return;
+	}
+	
+	if (inet_pton(AF_INET ,addr, &(addr_in->sin_addr) ) <= 0 )
+	{
+		error( "Error, address is not valid!" );
+	}
 
 }
 
-
+void bindSocket(int socket, struct sockaddr_in* addr_in)
+{
+	if( bind( socket,(struct sockaddr *) addr_in, sizeof( *addr_in ) ) < 0 )
+    {
+        error( "ERROR, impossible to bind socket" );
+    }
+}
 
 void recieveFile( const char* path, int sourceSocket )
 {
@@ -102,7 +113,11 @@ void recieveFile( const char* path, int sourceSocket )
 	
 	while( 1 )
 	{
+		printf("before recv");
+		fflush(stdout);
 		recieved_bytes = recv(sourceSocket, recieved_data, BUFFSIZE, 0);
+		printf("after recv");
+		fflush(stdout);
 		if( recieved_bytes == -1 )
 		{
 			close(file);

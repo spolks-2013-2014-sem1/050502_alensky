@@ -45,7 +45,8 @@ int main( int argc, char *argv[] )
 	if( ! strcmp( argv[1], "-l" ) )
 	{
 		listener = createSocket();
-		bindSocket( listener, &hostAddr, argv[1], argv[2]);
+		bindAddr( &hostAddr, argv[1], argv[2] );
+		bindSocket( listener, &hostAddr);
 		listen( listener, 1 );
 		socklen_t client_addr_len = sizeof( clientAddr );
         client = accept(listener, (struct sockaddr*)& clientAddr, &client_addr_len );
@@ -57,7 +58,7 @@ int main( int argc, char *argv[] )
 	else
 	{
 		client = createSocket();
-		bindSocket( client, &clientAddr, argv[1], argv[2]);
+		bindAddr( &clientAddr, argv[1], argv[2] );
 		if( connect( client, (struct sockaddr *) &clientAddr, sizeof( clientAddr ) ) < 0 )
 		{
 			error("Error, connection failed");

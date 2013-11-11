@@ -113,11 +113,7 @@ void recieveFile( const char* path, int sourceSocket )
 	
 	while( 1 )
 	{
-		printf("before recv");
-		fflush(stdout);
 		recieved_bytes = recv(sourceSocket, recieved_data, BUFFSIZE, 0);
-		printf("after recv");
-		fflush(stdout);
 		if( recieved_bytes == -1 )
 		{
 			close(file);

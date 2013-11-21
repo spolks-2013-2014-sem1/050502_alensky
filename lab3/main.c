@@ -31,12 +31,19 @@
 #include <netinet/in.h>
 #include <fcntl.h>
 
+int createSocket();
+void bindAddr(struct sockaddr_in*, const char*, const char* );
+void bindSocket(int, struct sockaddr_in*);
+void recieveFile( const char*, int );
+void sendFile( const char*, int );
+void error( const char* );
+
 int main( int argc, char *argv[] )
 {
 	int    client, listener, accepted_bytes;
     struct sockaddr_in hostAddr;
 	struct sockaddr_in clientAddr;
-
+	
 	if (argc < 2)
 	{
 		error("ERROR, no parametres provided");
@@ -65,12 +72,12 @@ int main( int argc, char *argv[] )
 		};
 	}
 	
-	if( ! strcmp( argv[3], "-ld" ) )
+	if( ! strcmp( argv[3], "-r" ) )
 	{
 		recieveFile( argv[4], client );
 	}
 	
-	if( ! strcmp( argv[3], "-snd" ) )
+	if( ! strcmp( argv[3], "-s" ) )
 	{
 		sendFile( argv[4], client );
 	}

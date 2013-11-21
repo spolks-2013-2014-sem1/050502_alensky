@@ -38,16 +38,16 @@
 int createSocket()
 {
 
-    int _socket;
+    int clientSocket;
 
-    _socket = socket( AF_INET, SOCK_STREAM, 0 );
+    clientSocket = socket( AF_INET, SOCK_STREAM, 0 );
 
-    if( _socket < 0 )
+    if( clientSocket < 0 )
     {
         error( "ERROR, impossible to create socket" );
     }
 
-    return _socket;
+    return clientSocket;
 }
 
 void bindAddr(struct sockaddr_in* addr_in, const char* addr,const char * port )
@@ -72,7 +72,7 @@ void bindAddr(struct sockaddr_in* addr_in, const char* addr,const char * port )
 		return;
 	}
 	
-	if( !strcmp(addr, "-lchst") )
+	if( !strcmp(addr, "-lst") )
 	{
 		addr_in->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 		return;
@@ -163,4 +163,9 @@ void sendFile( const char* path, int targetSocket )
 	}
 }
 
+void error( const char* msg )
+{
+	perror(msg);
+	exit(0);
+}
 

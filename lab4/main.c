@@ -30,6 +30,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <fcntl.h>
+#include <signal.h>
 
 int createSocket();
 int bindAddr(struct sockaddr_in*, const char*, const char* );
@@ -37,7 +38,7 @@ int bindSocket(int, struct sockaddr_in*);
 int recieveFile( const char*, int );
 int sendFile( const char*, int );
 
-void sig_urg( int signo );
+void sig_urg( int );
 
 int    client, oobDataSize;
 
@@ -46,6 +47,12 @@ int main( int argc, char *argv[] )
 	int    listener, accepted_bytes, fileExists;
     struct sockaddr_in hostAddr;
 	struct sockaddr_in clientAddr;
+	
+	if( signal(SIGURG, sig_urg) == SIG_ERR )
+	{
+		perror( "signal" );
+		return -1;
+	}
 	
 	if (argc < 2)
 	{
@@ -109,6 +116,8 @@ int main( int argc, char *argv[] )
 	if( ! strcmp( argv[3], "-r" ) )
 	{	
 		recieveFile( argv[4], client );
+		printf("Recieved out-of-band data: %d bytes\n", oobDataSize);
+		fflush(stdout);
 	}
 	
 	if( ! strcmp( argv[3], "-s" ) )
@@ -126,6 +135,9 @@ void sig_urg( int signo )
 {
 	char buf[1];
 	int len = recv( client, buf, 1, MSG_OOB );
+	
+	printf("in handler %d\n", len );
+	fflush(stdout);
 	
 	if( len < 0 )
 	{

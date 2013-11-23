@@ -32,6 +32,7 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <signal.h>
 
 #define BUFFSIZE 1024
 
@@ -155,7 +156,7 @@ int recieveFile( const char* fileName, int sourceSocket )
 		return -1;
 	}
 	
-	if( fcntl( targetSocket, F_SETOWN, getpid() ) < 0 )
+	if( fcntl( sourceSocket, F_SETOWN, getpid() ) < 0 )
 	{
 		perror("receiveFile");
 		return -1;
@@ -191,7 +192,7 @@ int recieveFile( const char* fileName, int sourceSocket )
 int sendFile( const char* fileName, int targetSocket )
 {
 	int file;
-	int bytesToSend = 0, sentBytes = 0;
+	int bytesToSend = 0, sentBytes = 0, oobSentBytes = 0;
 	char dataToSend[BUFFSIZE];
 	
 	if( fileName == NULL )
@@ -216,6 +217,8 @@ int sendFile( const char* fileName, int targetSocket )
 	{
 		bytesToSend = read( file, dataToSend, BUFFSIZE );
 		
+		//oobSentBytes += send(targetSocket, "1", 1, MSG_OOB);
+		
 		sentBytes = send(targetSocket, dataToSend, bytesToSend, 0);
 		
 		if( sentBytes == -1 )
@@ -231,6 +234,10 @@ int sendFile( const char* fileName, int targetSocket )
 		}
 		
 	}
+	
+	printf("out-of-band data sent %d bytes\n", oobSentBytes );
+	fflush(stdout);
+	
 	close(file);
 	return 1;
 }

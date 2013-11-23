@@ -44,56 +44,61 @@ int createSocket()
 
     if( clientSocket < 0 )
     {
-        error( "ERROR, impossible to create socket" );
+        perror( "impossible to create socket" );
     }
 
     return clientSocket;
 }
 
-void bindAddr(struct sockaddr_in* addr_in, const char* addr,const char * port )
+int bindAddr(struct sockaddr_in* addr_in, const char* addr,const char * port )
 {
 
     addr_in->sin_family = AF_INET;
 	
 	if( port == NULL )
     {
-        error("Error, port is not provided");
+        perror("port is not provided");
+        return -1;
     }
 
 
 	if( ( addr_in->sin_port = htons( atoi(port) ) ) == 0)
     {
-		error( "Error, port is not valid!" );
+		perror( "port is not valid!" );
+		return -1;
     }
     
     if( !strcmp(addr, "-l") )
 	{
 		addr_in->sin_addr.s_addr = htonl(INADDR_ANY);
-		return;
+		return 1;
 	}
 	
 	if( !strcmp(addr, "-lst") )
 	{
 		addr_in->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-		return;
+		return 1;
 	}
 	
 	if (inet_pton(AF_INET ,addr, &(addr_in->sin_addr) ) <= 0 )
 	{
-		error( "Error, address is not valid!" );
+		perror( "address is not valid!" );
+		return -1;
 	}
-
+	return 1;
 }
 
-void bindSocket(int socket, struct sockaddr_in* addr_in)
+int bindSocket(int socket, struct sockaddr_in* addr_in)
 {
 	if( bind( socket,(struct sockaddr *) addr_in, sizeof( *addr_in ) ) < 0 )
     {
-        error( "ERROR, impossible to bind socket" );
+        perror( "impossible to bind socket" );
+        return -1;
     }
+    return 1;
 }
 
-void recieveFile( const char* path, int sourceSocket )
+int recieveFile( const char* path, int sourceSocket )
 {
 	int file = open( path, O_WRONLY|O_CREAT|O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	int recieved_bytes = 0;
@@ -101,13 +106,14 @@ void recieveFile( const char* path, int sourceSocket )
 	
 	if( path == NULL )
 	{
-		error("ERROR, path is not provided");
+		perror("path is not provided");
+		return -1;
 	}
 	
 	if( file < 0 )
 	{
-		close(sourceSocket);
-		error("Error, can not create file");
+		perror("can not create file");
+		return -1;
 	}
 	
 	
@@ -117,7 +123,8 @@ void recieveFile( const char* path, int sourceSocket )
 		if( recieved_bytes == -1 )
 		{
 			close(file);
-			error("Error, connection failed");
+			perror("connection failed");
+			return -1;
 		}
 		
 		write(file, recieved_data, recieved_bytes);
@@ -127,9 +134,12 @@ void recieveFile( const char* path, int sourceSocket )
 			break;
 		}
 	}
+	
+	close(file);
+	return 1;
 }
 
-void sendFile( const char* path, int targetSocket )
+int sendFile( const char* path, int targetSocket )
 {
 	int file;
 	int bytesToSend = 0, sentBytes = 0;
@@ -137,11 +147,13 @@ void sendFile( const char* path, int targetSocket )
 	
 	if( path == NULL )
 	{
-		error("ERROR, file is not provided");
+		perror("file is not provided");
+		return -1;
 	}
 	if( ( file = open( path, O_RDONLY ) ) == -1 )
 	{
-		error("ERROR, file is not found");
+		perror("file is not found");
+		return -1;
 	}
 	while( 1 )
 	{
@@ -152,7 +164,8 @@ void sendFile( const char* path, int targetSocket )
 		if( sentBytes == -1 )
 		{
 			close(file);
-			error("Error, connection failed");
+			perror("connection failed");
+			return -1;
 		}
 		
 		if( bytesToSend < BUFFSIZE )
@@ -161,11 +174,8 @@ void sendFile( const char* path, int targetSocket )
 		}
 		
 	}
+	close(file);
+	return 1;
 }
 
-void error( const char* msg )
-{
-	perror(msg);
-	exit(0);
-}
 

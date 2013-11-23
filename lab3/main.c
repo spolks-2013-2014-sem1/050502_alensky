@@ -32,11 +32,10 @@
 #include <fcntl.h>
 
 int createSocket();
-void bindAddr(struct sockaddr_in*, const char*, const char* );
-void bindSocket(int, struct sockaddr_in*);
-void recieveFile( const char*, int );
-void sendFile( const char*, int );
-void error( const char* );
+int bindAddr(struct sockaddr_in*, const char*, const char* );
+int bindSocket(int, struct sockaddr_in*);
+int recieveFile( const char*, int );
+int sendFile( const char*, int );
 
 int main( int argc, char *argv[] )
 {
@@ -46,29 +45,37 @@ int main( int argc, char *argv[] )
 	
 	if (argc < 2)
 	{
-		error("ERROR, no parametres provided");
+		perror("no parametres provided");
+		return -1;
 	}
 
 	if( ! strcmp( argv[1], "-l" ) )
 	{
-		listener = createSocket();
-		bindAddr( &hostAddr, argv[1], argv[2] );
-		bindSocket( listener, &hostAddr);
+		if( ( listener = createSocket() ) < 0 ) { return -1; }
+		
+		if( bindAddr( &hostAddr, argv[1], argv[2] ) < 0 ) { return -1; }
+		
+		if( bindSocket( listener, &hostAddr) < 0 ) { return -1; }
+		
 		listen( listener, 1 );
 		socklen_t client_addr_len = sizeof( clientAddr );
         client = accept(listener, (struct sockaddr*)& clientAddr, &client_addr_len );
 		if( client < 0 )
 		{
-			error("Error, connection failed");
+			perror("connection failed");
+			close(listener);
+			return -1;
 		}
 	}
 	else
 	{
-		client = createSocket();
+		if( ( client = createSocket() ) < 0 ) { return -1; }
 		bindAddr( &clientAddr, argv[1], argv[2] );
 		if( connect( client, (struct sockaddr *) &clientAddr, sizeof( clientAddr ) ) < 0 )
 		{
-			error("Error, connection failed");
+			perror("connection failed");
+			close( client );
+			return -1;
 		};
 	}
 	
@@ -81,6 +88,9 @@ int main( int argc, char *argv[] )
 	{
 		sendFile( argv[4], client );
 	}
+	
+	close(client);
+	close(listener);
 	return 1;
 }
 

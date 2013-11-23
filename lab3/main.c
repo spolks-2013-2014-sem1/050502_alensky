@@ -39,23 +39,42 @@ int sendFile( const char*, int );
 
 int main( int argc, char *argv[] )
 {
-	int    client, listener, accepted_bytes;
+	int    client, listener, accepted_bytes, fileExists;
     struct sockaddr_in hostAddr;
 	struct sockaddr_in clientAddr;
 	
 	if (argc < 2)
 	{
-		perror("no parametres provided");
+		printf("no parametres provided\n");
+		fflush(stdout);
 		return -1;
 	}
-
+	
+	fileExists = isFileExists( argv[4] );
+	
+	if( fileExists < 0 ) 
+		return -1;
+	
+	
+	if( ! strcmp( argv[3], "-s" ) )
+	{
+		if( fileExists == 0 )
+		{
+			perror("Error");
+			return -1;
+		}
+	}
+	
 	if( ! strcmp( argv[1], "-l" ) )
 	{
-		if( ( listener = createSocket() ) < 0 ) { return -1; }
+		if( ( listener = createSocket() ) < 0 ) 
+			return -1;
 		
-		if( bindAddr( &hostAddr, argv[1], argv[2] ) < 0 ) { return -1; }
+		if( bindAddr( &hostAddr, argv[1], argv[2] ) < 0 ) 
+			return -1;
 		
-		if( bindSocket( listener, &hostAddr) < 0 ) { return -1; }
+		if( bindSocket( listener, &hostAddr) < 0 ) 
+			return -1;
 		
 		listen( listener, 1 );
 		socklen_t client_addr_len = sizeof( clientAddr );
@@ -69,18 +88,22 @@ int main( int argc, char *argv[] )
 	}
 	else
 	{
-		if( ( client = createSocket() ) < 0 ) { return -1; }
+		if( ( client = createSocket() ) < 0 ) 
+			return -1;
+			
 		bindAddr( &clientAddr, argv[1], argv[2] );
+		
 		if( connect( client, (struct sockaddr *) &clientAddr, sizeof( clientAddr ) ) < 0 )
 		{
 			perror("connection failed");
 			close( client );
 			return -1;
-		};
+		}
+		
 	}
 	
 	if( ! strcmp( argv[3], "-r" ) )
-	{
+	{	
 		recieveFile( argv[4], client );
 	}
 	

@@ -35,6 +35,36 @@
 
 #define BUFFSIZE 1024
 
+int isDigitStr( const char* str )
+{
+	int len = strlen( str );
+	int i;
+	for( i = 0; i < len; i++ )
+	{
+		if( str[i] < '0' || str[i] > '9' )
+			return 0;
+	}
+	return 1;
+}
+
+int isFileExists( const char* fileName )
+{
+	if( fileName == NULL )
+	{
+		printf("file name is not provided\n");
+		fflush(stdout);
+		return -1;
+	}
+	
+	int file = open( fileName, O_RDONLY );
+	if( file == -1 )
+	{
+		return 0;
+	}
+	close(file);
+	return 1;
+}
+
 int createSocket()
 {
 
@@ -57,16 +87,22 @@ int bindAddr(struct sockaddr_in* addr_in, const char* addr,const char * port )
 	
 	if( port == NULL )
     {
-        perror("port is not provided");
+        printf("port is not provided\n");
+        fflush(stdout);
         return -1;
     }
 
 
-	if( ( addr_in->sin_port = htons( atoi(port) ) ) == 0)
+	if( ! isDigitStr(port) )
     {
-		perror( "port is not valid!" );
+		printf( "port is not valid!\n" );
+		fflush(stdout);
 		return -1;
     }
+    else
+    {
+		addr_in->sin_port = htons( atoi(port) );
+	}
     
     if( !strcmp(addr, "-l") )
 	{
@@ -98,17 +134,20 @@ int bindSocket(int socket, struct sockaddr_in* addr_in)
     return 1;
 }
 
-int recieveFile( const char* path, int sourceSocket )
+int recieveFile( const char* fileName, int sourceSocket )
 {
-	int file = open( path, O_WRONLY|O_CREAT|O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+	int file;
 	int recieved_bytes = 0;
 	char recieved_data[ BUFFSIZE ];
 	
-	if( path == NULL )
+	if( fileName == NULL )
 	{
-		perror("path is not provided");
+		printf("file name is not provided\n");
+		fflush(stdout);
 		return -1;
 	}
+	
+	file = open( fileName, O_WRONLY|O_CREAT|O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	
 	if( file < 0 )
 	{
@@ -127,6 +166,11 @@ int recieveFile( const char* path, int sourceSocket )
 			return -1;
 		}
 		
+		if( recieved_bytes == 0 )
+		{
+			break;
+		}
+		
 		write(file, recieved_data, recieved_bytes);
 		
 		if( recieved_bytes < BUFFSIZE )
@@ -139,18 +183,19 @@ int recieveFile( const char* path, int sourceSocket )
 	return 1;
 }
 
-int sendFile( const char* path, int targetSocket )
+int sendFile( const char* fileName, int targetSocket )
 {
 	int file;
 	int bytesToSend = 0, sentBytes = 0;
 	char dataToSend[BUFFSIZE];
 	
-	if( path == NULL )
+	if( fileName == NULL )
 	{
-		perror("file is not provided");
+		printf("file name is not provided\n");
+		fflush(stdout);
 		return -1;
 	}
-	if( ( file = open( path, O_RDONLY ) ) == -1 )
+	if( ( file = open( fileName, O_RDONLY ) ) == -1 )
 	{
 		perror("file is not found");
 		return -1;

@@ -133,11 +133,9 @@ int main( int argc, char *argv[] )
 
 void sig_urg( int signo )
 {
-	char buf[1];
-	int len = recv( client, buf, 1, MSG_OOB );
+	char data;
+	int len = recv( client, &data, 1, MSG_OOB );
 	
-	printf("in handler %d\n", len );
-	fflush(stdout);
 	
 	if( len < 0 )
 	{

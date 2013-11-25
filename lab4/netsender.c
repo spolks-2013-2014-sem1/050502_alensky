@@ -138,8 +138,8 @@ int bindSocket(int socket, struct sockaddr_in* addr_in)
 int recieveFile( const char* fileName, int sourceSocket )
 {
 	int file;
-	int recieved_bytes = 0;
-	char recieved_data[ BUFFSIZE ];
+	int received_bytes = 0, totalReceivedBytes = 0;
+	char received_data[ BUFFSIZE ];
 	
 	if( fileName == NULL )
 	{
@@ -164,26 +164,30 @@ int recieveFile( const char* fileName, int sourceSocket )
 	
 	while( 1 )
 	{
-		recieved_bytes = recv(sourceSocket, recieved_data, BUFFSIZE, 0);
-		if( recieved_bytes == -1 )
+		received_bytes = recv(sourceSocket, received_data, BUFFSIZE, 0);
+		totalReceivedBytes += received_bytes;
+		if( received_bytes == -1 )
 		{
 			close(file);
 			perror("connection failed");
 			return -1;
 		}
 		
-		if( recieved_bytes == 0 )
+		if( received_bytes == 0 )
 		{
 			break;
 		}
 		
-		write(file, recieved_data, recieved_bytes);
+		write(file, received_data, received_bytes);
 		
-		if( recieved_bytes < BUFFSIZE )
+		if( received_bytes < BUFFSIZE )
 		{
 			break;
 		}
 	}
+	
+	printf("total data sent %d bytes\n", totalReceivedBytes );
+	fflush(stdout);
 	
 	close(file);
 	return 1;
@@ -192,7 +196,7 @@ int recieveFile( const char* fileName, int sourceSocket )
 int sendFile( const char* fileName, int targetSocket )
 {
 	int file;
-	int bytesToSend = 0, sentBytes = 0, oobSentBytes = 0;
+	int bytesToSend = 0, sentBytes = 0, oobSentBytes = 0, totalSentBytes = 0;
 	char dataToSend[BUFFSIZE];
 	
 	if( fileName == NULL )
@@ -207,19 +211,16 @@ int sendFile( const char* fileName, int targetSocket )
 		return -1;
 	}
 	
-	if( fcntl( targetSocket, F_SETOWN ) < 0 )
-	{
-		perror("sendFile");
-		return -1;
-	}
 	
 	while( 1 )
 	{
 		bytesToSend = read( file, dataToSend, BUFFSIZE );
-		
-		//oobSentBytes += send(targetSocket, "1", 1, MSG_OOB);
-		
 		sentBytes = send(targetSocket, dataToSend, bytesToSend, 0);
+		totalSentBytes += sentBytes;
+		
+		usleep(10);
+		
+		oobSentBytes += send(targetSocket, "1", 1, MSG_OOB);
 		
 		if( sentBytes == -1 )
 		{
@@ -235,8 +236,12 @@ int sendFile( const char* fileName, int targetSocket )
 		
 	}
 	
+	printf("total data sent %d bytes\n", totalSentBytes );
+	fflush(stdout);
+	
 	printf("out-of-band data sent %d bytes\n", oobSentBytes );
 	fflush(stdout);
+	
 	
 	close(file);
 	return 1;

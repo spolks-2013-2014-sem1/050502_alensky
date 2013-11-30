@@ -40,7 +40,7 @@ int sendFile( const char*, int );
 
 void sig_urg( int );
 
-int    client, oobDataSize;
+int    client;
 
 int main( int argc, char *argv[] )
 {
@@ -116,8 +116,6 @@ int main( int argc, char *argv[] )
 	if( ! strcmp( argv[3], "-r" ) )
 	{	
 		recieveFile( argv[4], client );
-		printf("Recieved out-of-band data: %d bytes\n", oobDataSize);
-		fflush(stdout);
 	}
 	
 	if( ! strcmp( argv[3], "-s" ) )
@@ -133,14 +131,10 @@ int main( int argc, char *argv[] )
 
 void sig_urg( int signo )
 {
-	char data;
-	int len = recv( client, &data, 1, MSG_OOB );
-	
+	char percent;
+	int len = recv( client, &percent, 1, MSG_OOB );
 	
 	if( len < 0 )
-	{
 		perror("SIGURG HANDLER");
-	}
-	
-	oobDataSize += len;
+	else fprintf(stderr, "recieved %d%%\n", percent);
 }

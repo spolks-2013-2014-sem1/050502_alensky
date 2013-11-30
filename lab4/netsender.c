@@ -53,16 +53,15 @@ int isFileExists( const char* fileName )
 	if( fileName == NULL )
 	{
 		printf("file name is not provided\n");
-		fflush(stdout);
 		return -1;
 	}
 	
-	int file = open( fileName, O_RDONLY );
-	if( file == -1 )
+	FILE* file = fopen( fileName, "r" );
+	if( file == NULL )
 	{
 		return 0;
 	}
-	close(file);
+	fclose(file);
 	return 1;
 }
 
@@ -137,20 +136,19 @@ int bindSocket(int socket, struct sockaddr_in* addr_in)
 
 int recieveFile( const char* fileName, int sourceSocket )
 {
-	int file;
+	FILE* file;
 	int received_bytes = 0, totalReceivedBytes = 0;
 	char received_data[ BUFFSIZE ];
 	
 	if( fileName == NULL )
 	{
 		printf("file name is not provided\n");
-		fflush(stdout);
 		return -1;
 	}
 	
-	file = open( fileName, O_WRONLY|O_CREAT|O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+	file = fopen( fileName, "wb");
 	
-	if( file < 0 )
+	if( file == NULL )
 	{
 		perror("can not create file");
 		return -1;
@@ -168,82 +166,65 @@ int recieveFile( const char* fileName, int sourceSocket )
 		totalReceivedBytes += received_bytes;
 		if( received_bytes == -1 )
 		{
-			close(file);
+			fclose(file);
 			perror("connection failed");
 			return -1;
 		}
-		
 		if( received_bytes == 0 )
 		{
 			break;
 		}
-		
-		write(file, received_data, received_bytes);
-		
+		fwrite(received_data, 1, received_bytes, file);
 		if( received_bytes < BUFFSIZE )
 		{
 			break;
 		}
 	}
-	
-	printf("total data sent %d bytes\n", totalReceivedBytes );
-	fflush(stdout);
-	
-	close(file);
+	fclose(file);
 	return 1;
 }
 
 int sendFile( const char* fileName, int targetSocket )
 {
-	int file;
-	int bytesToSend = 0, sentBytes = 0, oobSentBytes = 0, totalSentBytes = 0;
+	FILE* file;
+	struct stat st;
+	int bytesToSend = 0, sentBytes = 0, percent;
 	char dataToSend[BUFFSIZE];
 	
 	if( fileName == NULL )
 	{
 		printf("file name is not provided\n");
-		fflush(stdout);
 		return -1;
-	}
-	if( ( file = open( fileName, O_RDONLY ) ) == -1 )
+	}	
+	file = fopen( fileName, "rb" );	
+	if( file == NULL )
 	{
 		perror("file is not found");
 		return -1;
 	}
 	
+	stat(fileName, &st);
 	
 	while( 1 )
 	{
-		bytesToSend = read( file, dataToSend, BUFFSIZE );
-		sentBytes = send(targetSocket, dataToSend, bytesToSend, 0);
-		totalSentBytes += sentBytes;
-		
-		usleep(10);
-		
-		oobSentBytes += send(targetSocket, "1", 1, MSG_OOB);
-		
+		bytesToSend = fread( dataToSend, 1, BUFFSIZE, file );
+		sentBytes = send(targetSocket, dataToSend, bytesToSend, 0);	
+		usleep(10000);
+		percent = sentBytes * 100 / st.st_size;
+		fprintf(stderr, "sent %d%%\n", percent);
+		send(targetSocket, &percent, 1 , MSG_OOB);
 		if( sentBytes == -1 )
 		{
-			close(file);
+			fclose(file);
 			perror("connection failed");
 			return -1;
-		}
-		
+		}	
 		if( bytesToSend < BUFFSIZE )
-		{
 			break;
-		}
 		
 	}
 	
-	printf("total data sent %d bytes\n", totalSentBytes );
-	fflush(stdout);
-	
-	printf("out-of-band data sent %d bytes\n", oobSentBytes );
-	fflush(stdout);
-	
-	
-	close(file);
+	fclose(file);
 	return 1;
 }
 

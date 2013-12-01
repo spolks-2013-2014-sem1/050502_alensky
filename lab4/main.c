@@ -34,12 +34,6 @@
 #include "../spolks_lib/sockcore.c"
 #include "netsender.c"
 
-int connectToRemote(struct sockaddr_in* , const char * , const char * );
-int createListener(struct sockaddr_in* , const char * );
-int acceptClient(int , struct sockaddr_in* );
-int recieveFile( const char*, int );
-int sendFile( const char*, int );
-int fileExists(const char *);
 void sig_urg( int );
 
 int	client;
@@ -132,5 +126,5 @@ void sig_urg( int signo )
 	
 	if( len < 0 )
 		perror("SIGURG HANDLER");
-	else fprintf(stderr, "recieved %d%%\n", percent);
+	else printf(stderr, "recieved %d%%\n", percent);
 }

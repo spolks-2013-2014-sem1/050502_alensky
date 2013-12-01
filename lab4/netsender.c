@@ -130,7 +130,7 @@ int sendFile( const char* fileName, int targetSocket )
 		sentBytes = send(targetSocket, dataToSend, bytesToSend, 0);	
 		usleep(10000);
 		percent = sentBytes * 100 / st.st_size;
-		fprintf(stderr, "sent %d%%\n", percent);
+		printf(stderr, "sent %d%%\n", percent);
 		send(targetSocket, &percent, 1 , MSG_OOB);
 		if( sentBytes == -1 )
 		{

@@ -57,7 +57,7 @@ int main( int argc, char *argv[] )
 		return -1;
 	}
 		
-	while( (option = getopt(argc, argv, "alsrp:f:") ) != -1 )
+	while( (option = getopt(argc, argv, "lsra:p:f:") ) != -1 )
 	{
 		switch( option )
 		{

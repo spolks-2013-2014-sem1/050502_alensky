@@ -1,2 +1,2 @@
 all:
-	gcc netsender.c main.c -o ns
+	gcc netsender.c sockcore.c main.c -o ns

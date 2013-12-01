@@ -36,19 +36,7 @@
 
 #define BUFFSIZE 1024
 
-int isDigitStr( const char* str )
-{
-	int len = strlen( str );
-	int i;
-	for( i = 0; i < len; i++ )
-	{
-		if( str[i] < '0' || str[i] > '9' )
-			return 0;
-	}
-	return 1;
-}
-
-int isFileExists( const char* fileName )
+int fileExists( const char* fileName )
 {
 	if( fileName == NULL )
 	{
@@ -63,75 +51,6 @@ int isFileExists( const char* fileName )
 	}
 	fclose(file);
 	return 1;
-}
-
-int createSocket()
-{
-
-    int clientSocket;
-
-    clientSocket = socket( AF_INET, SOCK_STREAM, 0 );
-
-    if( clientSocket < 0 )
-    {
-        perror( "impossible to create socket" );
-    }
-
-    return clientSocket;
-}
-
-int bindAddr(struct sockaddr_in* addr_in, const char* addr,const char * port )
-{
-
-    addr_in->sin_family = AF_INET;
-	
-	if( port == NULL )
-    {
-        printf("port is not provided\n");
-        fflush(stdout);
-        return -1;
-    }
-
-
-	if( ! isDigitStr(port) )
-    {
-		printf( "port is not valid!\n" );
-		fflush(stdout);
-		return -1;
-    }
-    else
-    {
-		addr_in->sin_port = htons( atoi(port) );
-	}
-    
-    if( !strcmp(addr, "-l") )
-	{
-		addr_in->sin_addr.s_addr = htonl(INADDR_ANY);
-		return 1;
-	}
-	
-	if( !strcmp(addr, "-lst") )
-	{
-		addr_in->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-		return 1;
-	}
-	
-	if (inet_pton(AF_INET ,addr, &(addr_in->sin_addr) ) <= 0 )
-	{
-		perror( "address is not valid!" );
-		return -1;
-	}
-	return 1;
-}
-
-int bindSocket(int socket, struct sockaddr_in* addr_in)
-{
-	if( bind( socket,(struct sockaddr *) addr_in, sizeof( *addr_in ) ) < 0 )
-    {
-        perror( "impossible to bind socket" );
-        return -1;
-    }
-    return 1;
 }
 
 int recieveFile( const char* fileName, int sourceSocket )

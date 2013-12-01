@@ -32,19 +32,20 @@
 #include <fcntl.h>
 #include <signal.h>
 
-int createSocket();
-int bindAddr(struct sockaddr_in*, const char*, const char* );
-int bindSocket(int, struct sockaddr_in*);
+int connectToRemote(struct sockaddr_in* , const char * , const char * );
+int createListener(struct sockaddr_in* , const char * );
+int acceptClient(int , struct sockaddr_in* );
 int recieveFile( const char*, int );
 int sendFile( const char*, int );
-
+int fileExists(const char *);
 void sig_urg( int );
 
-int    client;
+int	client;
 
 int main( int argc, char *argv[] )
 {
-	int    listener, accepted_bytes, fileExists;
+	int    listener, fExists, option, listen = 0, fileDirection = 0;
+	char *fileName, *address, *port;
     struct sockaddr_in hostAddr;
 	struct sockaddr_in clientAddr;
 	
@@ -57,70 +58,63 @@ int main( int argc, char *argv[] )
 	if (argc < 2)
 	{
 		printf("no parametres provided\n");
-		fflush(stdout);
 		return -1;
 	}
-	
-	fileExists = isFileExists( argv[4] );
-	
-	if( fileExists < 0 ) 
-		return -1;
-	
-	
-	if( ! strcmp( argv[3], "-s" ) )
+		
+	while( (option = getopt(argc, argv, "alsrp:f:") ) != -1 )
 	{
-		if( fileExists == 0 )
+		switch( option )
 		{
-			perror("Error");
-			return -1;
+			case 'f':
+				fileName = optarg;
+				break;
+			case 'a':
+				address = optarg;
+				break;
+			case 'p':
+				port = optarg;
+				break;
+			case 'l':
+				listen = 1;
+				break;
+			case 's':
+				fileDirection = -1;
+				break;
+			case 'r':
+				fileDirection = 1;
+				break;
 		}
 	}
+	fExists = fileExists( fileName );
 	
-	if( ! strcmp( argv[1], "-l" ) )
+	if( listen )
 	{
-		if( ( listener = createSocket() ) < 0 ) 
-			return -1;
-		
-		if( bindAddr( &hostAddr, argv[1], argv[2] ) < 0 ) 
-			return -1;
-		
-		if( bindSocket( listener, &hostAddr) < 0 ) 
-			return -1;
-		
-		listen( listener, 1 );
-		socklen_t client_addr_len = sizeof( clientAddr );
-        client = accept(listener, (struct sockaddr*)& clientAddr, &client_addr_len );
-		if( client < 0 )
+		switch( fExists )
 		{
-			perror("connection failed");
-			close(listener);
-			return -1;
+			case 0:
+				perror("file doesn't exists");
+				return -1;
+			case -1:
+				printf("file name has not beev provided\n");
+				return -1;
 		}
+		
+		listener = createListener( &hostAddr, port);
+		client = acceptClient( listener, &clientAddr);
 	}
 	else
 	{
-		if( ( client = createSocket() ) < 0 ) 
-			return -1;
-			
-		bindAddr( &clientAddr, argv[1], argv[2] );
-		
-		if( connect( client, (struct sockaddr *) &clientAddr, sizeof( clientAddr ) ) < 0 )
-		{
-			perror("connection failed");
-			close( client );
-			return -1;
-		}
-		
+		client = connectToRemote( &clientAddr, address, port);
 	}
 	
-	if( ! strcmp( argv[3], "-r" ) )
-	{	
-		recieveFile( argv[4], client );
-	}
-	
-	if( ! strcmp( argv[3], "-s" ) )
+	switch( fileDirection )
 	{
-		sendFile( argv[4], client );
+		case -1:
+			sendFile( fileName, client );
+			break;
+		case 1:
+			recieveFile( fileName, client );
+			break;
 	}
 	
 	close(client);

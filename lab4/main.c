@@ -31,6 +31,8 @@
 #include <netinet/in.h>
 #include <fcntl.h>
 #include <signal.h>
+#include "../spolks_lib/sockcore.c"
+#include "netsender.c"
 
 int connectToRemote(struct sockaddr_in* , const char * , const char * );
 int createListener(struct sockaddr_in* , const char * );
@@ -57,7 +59,7 @@ int main( int argc, char *argv[] )
 	
 	if (argc < 2)
 	{
-		printf("no parametres provided\n");
+		printf("no parametres provided\n ns [-a address] [-p port] [-s send_file] [-r receive_file] [-f file_name] [-l listen]\n");
 		return -1;
 	}
 		

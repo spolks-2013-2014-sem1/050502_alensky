@@ -110,9 +110,11 @@ int main( int argc, char *argv[] )
 			break;
 		case 1:
 			recieveFile( fileName, client );
-			close(client);
 			break;
 	}
+	
+	printf("Press any key...\n");
+	getchar();
 	
 	close(client);
 	close(listener);
@@ -123,8 +125,6 @@ int main( int argc, char *argv[] )
 void sig_urg( int signo )
 {
 	char percent;
-	int len = recv( client, &percent, 1, MSG_OOB );
-	if( len < 0 )
-		perror("SIGURG HANDLER");
-	else printf("recieved %d%%\n", percent);
+	recv( client, &percent, 1, MSG_OOB );
+	printf("recieved %d%%\n", percent);
 }

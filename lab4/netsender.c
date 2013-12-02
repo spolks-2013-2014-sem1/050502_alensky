@@ -96,6 +96,7 @@ int recieveFile( const char* fileName, int sourceSocket )
 		fwrite(received_data, 1, received_bytes, file);
 		if( received_bytes < BUFFSIZE )
 		{
+			sleep( 1 );
 			break;
 		}
 	}
@@ -130,7 +131,7 @@ int sendFile( const char* fileName, int targetSocket )
 		sentBytes = send(targetSocket, dataToSend, bytesToSend, 0);	
 		usleep(10000);
 		percent = sentBytes * 100 / st.st_size;
-		printf(stderr, "sent %d%%\n", percent);
+		printf("sent %d%%\n", percent);
 		send(targetSocket, &percent, 1 , MSG_OOB);
 		if( sentBytes == -1 )
 		{
@@ -139,7 +140,9 @@ int sendFile( const char* fileName, int targetSocket )
 			return -1;
 		}	
 		if( bytesToSend < BUFFSIZE )
+		{
 			break;
+		}
 		
 	}
 	

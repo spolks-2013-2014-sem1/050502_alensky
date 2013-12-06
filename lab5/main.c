@@ -32,7 +32,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include "../spolks_lib/sockcore.c"
-#include "netsender.c"
+#include "netsenderUDP.c"
 
 void sig_urg( int );
 

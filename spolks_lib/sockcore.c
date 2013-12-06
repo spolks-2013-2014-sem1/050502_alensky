@@ -36,6 +36,7 @@ int createSocket()
     return clientSocket;
 }
 
+
 int bindAddr(struct sockaddr_in* addr_in, const char* addr,const char * port )
 {
 
@@ -142,4 +143,53 @@ int connectToRemote(struct sockaddr_in* clientAddr, const char * addr, const cha
 		return result;
 	}
 	return client;
+}
+
+int createUDPSocket()
+{
+
+    int clientSocket;
+
+    clientSocket = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP );
+
+    if( clientSocket < 0 )
+    {
+        perror( "impossible to create UDP socket" );
+    }
+
+    return clientSocket;
+}
+
+int clientUDP(struct sockaddr_in* clientAddr, const char * addr, const char * port)
+{
+	int result = 0;
+	int client = createUDPSocket();
+	
+	if( client )
+		result = bindAddr( clientAddr, addr, port );
+	else return -1;
+		
+	if( result < 0 )
+	{
+		perror("connection failed");
+		close( client );
+		return result;
+	}
+	return client;
+}
+
+int createUDPListener(struct sockaddr_in* hostAddr, const char * port )
+{
+	int result = 0;
+	int listener = createUDPSocket();
+	if( listener )
+		result = bindAddr( hostAddr, NULL, port);
+		
+	if( result )
+		result = bindSocket( listener, hostAddr);
+	if( result < 0 )
+	{
+		exit(-1);
+	}
+	return listener;
 }

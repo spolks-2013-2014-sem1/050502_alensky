@@ -1,27 +1,3 @@
-/*
- * netsender.c
- * 
- * Copyright 2013 artur <artur@artur-VirtualBox>
- * 
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- * 
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
- * MA 02110-1301, USA.
- * 
- * 
- */
-
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -32,112 +8,188 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
-#include <signal.h>
 
-#define BUFFSIZE 1024
-
-int fileExists( const char* fileName )
+int isDigitOnly( const char* str )
 {
-	if( fileName == NULL )
+	int len = strlen( str );
+	int i;
+	for( i = 0; i < len; i++ )
 	{
-		printf("file name is not provided\n");
-		return -1;
+		if( str[i] < '0' || str[i] > '9' )
+			return 0;
 	}
-	
-	FILE* file = fopen( fileName, "r" );
-	if( file == NULL )
-	{
-		return 0;
-	}
-	fclose(file);
 	return 1;
 }
 
-int recieveFileUDP( const char* fileName, int targetSocket )
+int createSocket()
 {
-	FILE* file;
-	int received_bytes = 0, totalReceivedBytes = 0;
-	char received_data[ BUFFSIZE ];
-	struct sockaddr_in addr;
-	int slen = sizeof(addr);
-	if( fileName == NULL )
+
+    int clientSocket;
+
+    clientSocket = socket( AF_INET, SOCK_STREAM, 0 );
+
+    if( clientSocket < 0 )
+    {
+        perror( "impossible to create socket" );
+    }
+
+    return clientSocket;
+}
+
+
+int bindAddr(struct sockaddr_in* addr_in, const char* addr,const char * port )
+{
+
+    addr_in->sin_family = AF_INET;
+	
+	if( port == NULL )
+    {
+        printf("port is not provided\n");
+        fflush(stdout);
+        return -1;
+    }
+
+
+	if( ! isDigitOnly(port) )
+    {
+		printf( "port is not valid!\n" );
+		fflush(stdout);
+		return -1;
+    }
+    else
+    {
+		addr_in->sin_port = htons( atoi(port) );
+	}
+    
+    if( addr == NULL )
 	{
-		printf("file name is not provided\n");
+		addr_in->sin_addr.s_addr = htonl(INADDR_ANY);
+		return 1;
+	}
+	
+	if( !strcmp(addr, "localhost") )
+	{
+		addr_in->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+		return 1;
+	}
+	
+	if (inet_pton(AF_INET ,addr, &(addr_in->sin_addr) ) <= 0 )
+	{
+		perror( "address is not valid!" );
 		return -1;
 	}
-	
-	file = fopen( fileName, "wb");
-	
-	if( file == NULL )
-	{
-		perror("can not create file");
-		return -1;
-	}
-	
-	while( 1 )
-	{
-		received_bytes = recvfrom(targetSocket, received_data, BUFFSIZE, 0, &addr, &slen);
-		totalReceivedBytes += received_bytes;
-		if( received_bytes == -1 )
-		{
-			fclose(file);
-			perror("connection failed");
-			return -1;
-		}
-		if( received_bytes == 0 )
-		{
-			break;
-		}
-		fwrite(received_data, 1, received_bytes, file);
-		if( received_bytes < BUFFSIZE )
-		{
-			break;
-		}
-	}
-	fclose(file);
 	return 1;
 }
 
-int sendFileUDP( const char* fileName, int sourceSocket, struct sockaddr_in* addr )
+int bindSocket(int socket, struct sockaddr_in* addr_in)
 {
-	FILE* file;
-	struct stat st;
-	int bytesToSend = 0, sentBytes = 0, percent;
-	char dataToSend[BUFFSIZE];
-	
-	if( fileName == NULL )
-	{
-		printf("file name is not provided\n");
-		return -1;
-	}	
-	file = fopen( fileName, "rb" );	
-	if( file == NULL )
-	{
-		perror("file is not found");
-		return -1;
-	}
-	
-	stat(fileName, &st);
-	
-	while( 1 )
-	{
-		bytesToSend = fread( dataToSend, 1, BUFFSIZE, file );
-		percent = bytesToSend * 100 / st.st_size;
-		sentBytes = sendto(sourceSocket, dataToSend, bytesToSend, 0, addr,  sizeof(addr) );
-		printf("sent %d%%\n", percent);
-		if( sentBytes == -1 )
-		{
-			fclose(file);
-			perror("connection failed");
-			return -1;
-		}	
-		if( bytesToSend < BUFFSIZE )
-		{
-			break;
-		}
+	if( bind( socket,(struct sockaddr *) addr_in, sizeof( *addr_in ) ) < 0 )
+    {
+        perror( "impossible to bind socket" );
+        return -1;
+    }
+    return 1;
+}
+
+
+int createListener(struct sockaddr_in* hostAddr, const char * port )
+{
+	int result = 0;
+	int listener = createSocket();
+	if( listener )
+		result = bindAddr( hostAddr, NULL, port);
 		
+	if( result )
+		result = bindSocket( listener, hostAddr);
+		
+	if( result )
+		result = listen( listener, 1 );
+	if( result < 0 )
+	{
+		exit(-1);
 	}
+	return listener;
+}
+
+int acceptClient(int listener, struct sockaddr_in* clientAddr)
+{
+	socklen_t client_addr_len = sizeof( *clientAddr );
+	int client = accept(listener, (struct sockaddr*) clientAddr, &client_addr_len );
+	if( client < 0 )
+	{
+		close(listener);
+		perror("accepting client");
+		exit(-1);
+	}
+	return client;
+}
+
+int connectToRemote(struct sockaddr_in* clientAddr, const char * addr, const char * port)
+{
+	int result = 0;
+	int client = createSocket();
 	
-	fclose(file);
-	return 1;
+	if( client )
+		result = bindAddr( clientAddr, addr, port );
+	else return -1;
+	
+	if( result )
+		result = connect( client, (struct sockaddr *) clientAddr, sizeof( *clientAddr ) );
+		
+	if( result < 0 )
+	{
+		perror("connection failed");
+		close( client );
+		return result;
+	}
+	return client;
+}
+
+int createUDPSocket()
+{
+
+    int clientSocket;
+
+    clientSocket = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP );
+
+    if( clientSocket < 0 )
+    {
+        perror( "impossible to create UDP socket" );
+    }
+
+    return clientSocket;
+}
+
+int clientUDP(struct sockaddr_in* clientAddr, const char * addr, const char * port)
+{
+	int result = 0;
+	int client = createUDPSocket();
+	
+	if( client )
+		result = bindAddr( clientAddr, addr, port );
+	else return -1;
+		
+	if( result < 0 )
+	{
+		perror("connection failed");
+		close( client );
+		return result;
+	}
+	return client;
+}
+
+int createUDPListener(struct sockaddr_in* hostAddr, const char * port )
+{
+	int result = 0;
+	int listener = createUDPSocket();
+	if( listener )
+		result = bindAddr( hostAddr, NULL, port);
+		
+	if( result )
+		result = bindSocket( listener, hostAddr);
+	if( result < 0 )
+	{
+		exit(-1);
+	}
+	return listener;
 }

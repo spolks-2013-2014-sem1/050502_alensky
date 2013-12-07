@@ -34,19 +34,12 @@
 #include "../spolks_lib/sockcore.c"
 #include "netsenderUDP.c"
 
-void sig_urg( int );
 
 int main( int argc, char *argv[] )
 {
 	int    sock, fExists, option, listen = 0, fileDirection = 0;
 	char *fileName, *address, *port;
-    struct sockaddr_in addr_in;
-	
-	if( signal(SIGURG, sig_urg) == SIG_ERR )
-	{
-		perror( "signal" );
-		return -1;
-	}
+    	struct sockaddr_in addr_in;
 	
 	if (argc < 2)
 	{
@@ -101,25 +94,17 @@ int main( int argc, char *argv[] )
 	switch( fileDirection )
 	{
 		case -1:
-			sendFileUDP( fileName, sock );
+			sendFileUDP( fileName, sock);
 			break;
 		case 1:
-			recieveFileUDP( fileName, sock );
+			recieveFileUDP( fileName, sock, &addr_in );
 			break;
 	}
 	
 	printf("Press any key...\n");
 	getchar();
 	
-	close(client);
-	close(listener);
+	close(sock);
 	return 1;
 }
 
-
-void sig_urg( int signo )
-{
-	char percent;
-	recv( client, &percent, 1, MSG_OOB );
-	printf("recieved %d%%\n", percent);
-}

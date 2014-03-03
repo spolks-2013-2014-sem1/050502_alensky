@@ -27,7 +27,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <fcntl.h>
-#include "../spolks_lib/sockcore.c" 
+#include "ping.c"
 
 int main( int argc, char *argv[] )
 {
@@ -41,6 +41,7 @@ int main( int argc, char *argv[] )
 		return -1;
 	}
 
+	ping(argv[1]);
 	
 	printf("Press any key...\n");
 	getchar();

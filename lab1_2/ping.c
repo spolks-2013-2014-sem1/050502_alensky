@@ -88,7 +88,8 @@ int ping( char * dst )
 	sockfd = create_socket_ICMP();
 	setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, &optval, sizeof(int));
 	
-	while(1)
+	int i = 0;
+	while(i++ < 4)
 	{
 		
 		
@@ -98,8 +99,9 @@ int ping( char * dst )
 		icmp->un.echo.sequence = sequence;
 		
 		icmp-> checksum = cksum((unsigned short *)icmp, sizeof(struct icmphdr));
-		
+
 		sendto(sockfd, packet, ip->tot_len, 0,(struct sockaddr *) &dst_addr, sizeof(struct sockaddr));
+		
 		
 		int addrlen = sizeof(dst_addr);
 		int response = recvfrom(sockfd, buffer, sizeof(struct iphdr) + sizeof(struct icmphdr), 0,(struct sockaddr *) &dst_addr, &addrlen);
@@ -117,9 +119,10 @@ int ping( char * dst )
 			
 			fflush(stdout);
 		}
-	
+		break;
+		//sleep(100);
 	}
-	
+	close(sockfd);
 } 
 
 

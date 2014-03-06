@@ -54,7 +54,7 @@ char* getip()
 
 int ping( char * dst )
 {
-	int sockfd, sequence = 1, optval;
+	int sockfd, sequence = 1, optval, addrlen, response;
 	struct iphdr* ip, *ip_reply;
     struct icmphdr* icmp;
     char* packet, * buffer, *src;
@@ -86,41 +86,36 @@ int ping( char * dst )
 	
 	
 	sockfd = create_socket_ICMP();
-	setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, &optval, sizeof(int));
+	//setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, &optval, sizeof(int));
 	
 	int i = 0;
 	while(i++ < 4)
-	{
-		
-		
+	{	
 		icmp->type = ICMP_ECHO;
 		icmp->code = 0;
-		icmp->un.echo.id = random();
-		icmp->un.echo.sequence = sequence;
+		icmp->un.echo.id = getpid();
+		icmp->un.echo.sequence = i;
 		
 		icmp-> checksum = cksum((unsigned short *)icmp, sizeof(struct icmphdr));
 
-		sendto(sockfd, packet, ip->tot_len, 0,(struct sockaddr *) &dst_addr, sizeof(struct sockaddr));
+		sendto(sockfd, /*packet*/packet + sizeof(struct iphdr), /*ip->tot_len*/ sizeof(struct icmphdr), 0,(struct sockaddr *) &dst_addr, sizeof(struct sockaddr));
 		
 		
-		int addrlen = sizeof(dst_addr);
-		int response = recvfrom(sockfd, buffer, sizeof(struct iphdr) + sizeof(struct icmphdr), 0,(struct sockaddr *) &dst_addr, &addrlen);
+		addrlen = sizeof(dst_addr);
+		response = recvfrom(sockfd, buffer, sizeof(struct iphdr) + sizeof(struct icmphdr), 0,(struct sockaddr *) &dst_addr, &addrlen);
 		if( response == -1 )
 		{
 			printf("\nnot response");
-			fflush(stdout);
 		}
 		else
 		{
-			printf("%d bytes from %s: icmp_req = %d ", response , dst, sequence);
+			printf("%d bytes from %s: icmp_req = %d ", response , dst, i);
 			ip_reply = (struct iphdr*) buffer;
 			printf("ID: %d ", ntohs(ip_reply->id));
 			printf("TTL: %d\n", ip_reply->ttl);
 			
-			fflush(stdout);
 		}
-		break;
-		//sleep(100);
+		sleep(1);
 	}
 	close(sockfd);
 } 

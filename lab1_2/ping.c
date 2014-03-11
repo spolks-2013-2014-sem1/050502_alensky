@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -49,26 +50,18 @@ char* getip()
 	h = gethostbyname(buffer);
 	return inet_ntoa(*(struct in_addr *)h->h_addr);
 }
-	
 
 
-int ping( char * dst )
+int sockfd, sequence = 0, optval, addrlen;
+struct sockaddr_in dst_addr, src_addr;
+int ident;
+
+void pinger()
 {
-	int sockfd, sequence = 1, optval, addrlen, response;
-	struct iphdr* ip, *ip_reply;
-    struct icmphdr* icmp;
-    char* packet, * buffer, *src;
-	struct sockaddr_in dst_addr, src_addr;
+	struct iphdr* ip;
+	struct icmphdr* icmp;
 	
-	src = getip();
-	
-	
-	addr_from_hostname(&dst_addr, dst, NULL);
-	addr_from_hostname(&src_addr, src, NULL);
-	
-	packet = malloc(sizeof(struct iphdr) + sizeof(struct icmphdr));
-	buffer = malloc(sizeof(struct iphdr) + sizeof(struct icmphdr));
-	
+	char* packet = malloc(sizeof(struct iphdr) + sizeof(struct icmphdr));
 	ip = (struct iphdr*) packet;
 	icmp = (struct icmphdr*) (packet + sizeof(struct iphdr));
 	
@@ -80,27 +73,52 @@ int ping( char * dst )
 	ip->frag_off = 0;
 	ip->ttl = 64;
 	ip->protocol = IPPROTO_ICMP;
-	ip->saddr = src_addr.sin_addr.s_addr;
+	ip->saddr = inet_addr("10.0.2.15");
 	ip->daddr = dst_addr.sin_addr.s_addr;
 	ip->check = cksum((unsigned short *)ip, sizeof(struct iphdr));
 	
+	icmp->type = ICMP_ECHO;
+	icmp->code = 0;
+	icmp->un.echo.id = ident;
+	icmp->un.echo.sequence = sequence++;
+	icmp-> checksum = cksum((unsigned short *)icmp, sizeof(struct icmphdr));
+	
+	//sendto(sockfd, packet + sizeof(struct iphdr), sizeof(struct icmphdr), 0,(struct sockaddr *) &dst_addr, sizeof(struct sockaddr));
+	sendto(sockfd, packet, ip->tot_len, 0,(struct sockaddr *) &dst_addr, sizeof(struct sockaddr));
+}
+
+void clock_handler(int sig)
+{
+	pinger();
+}
+
+int ping( char * dst )
+{
+	struct iphdr *ip_reply;
+	struct icmphdr *icmp_reply;
+	char *buffer, *src;
+	int response;
+	
+	ident = getpid() & 0xFFFF;
+	src = getip();
+
+	addr_from_hostname(&dst_addr, dst, NULL);
+	addr_from_hostname(&src_addr, src, NULL);
+	
+	int timeout = 1000;
 	
 	sockfd = create_socket_ICMP();
-	//setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, &optval, sizeof(int));
+	setsockopt(sockfd, IPPROTO_IP, IP_HDRINCL, &optval, sizeof(int));
+	setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, (char*)&timeout, sizeof(timeout));
+	setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,(char*)&timeout, sizeof(timeout));
 	
-	int i = 0;
-	while(i++ < 4)
+	printf("Localhost - %s\n", inet_ntoa(dst_addr.sin_addr));
+	
+	signal(SIGALRM, clock_handler);
+	buffer = malloc(sizeof(struct iphdr) + sizeof(struct icmphdr));
+	alarm(2);
+	while( 1 )
 	{	
-		icmp->type = ICMP_ECHO;
-		icmp->code = 0;
-		icmp->un.echo.id = getpid();
-		icmp->un.echo.sequence = i;
-		
-		icmp-> checksum = cksum((unsigned short *)icmp, sizeof(struct icmphdr));
-
-		sendto(sockfd, /*packet*/packet + sizeof(struct iphdr), /*ip->tot_len*/ sizeof(struct icmphdr), 0,(struct sockaddr *) &dst_addr, sizeof(struct sockaddr));
-		
-		
 		addrlen = sizeof(dst_addr);
 		response = recvfrom(sockfd, buffer, sizeof(struct iphdr) + sizeof(struct icmphdr), 0,(struct sockaddr *) &dst_addr, &addrlen);
 		if( response == -1 )
@@ -109,13 +127,16 @@ int ping( char * dst )
 		}
 		else
 		{
-			printf("%d bytes from %s: icmp_req = %d ", response , dst, i);
 			ip_reply = (struct iphdr*) buffer;
+			icmp_reply = (struct icmphdr*)(buffer + sizeof(struct iphdr));
+			printf("%d bytes from %s: icmp_req = %d ", response , inet_ntoa(dst_addr.sin_addr), icmp_reply->un.echo.sequence);
 			printf("ID: %d ", ntohs(ip_reply->id));
 			printf("TTL: %d\n", ip_reply->ttl);
 			
 		}
-		sleep(1);
+		free(buffer);
+		buffer = malloc(sizeof(struct iphdr) + sizeof(struct icmphdr));
+		alarm(2);
 	}
 	close(sockfd);
 } 

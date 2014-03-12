@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <net/if.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <linux/ip.h>
@@ -11,6 +12,8 @@
 #include <string.h>
 #include <unistd.h>
 #include "../spolks_lib/sockcore.c" 
+#include <sys/ioctl.h>
+
 
 unsigned short cksum(unsigned short *addr, int len)
 {
@@ -41,7 +44,7 @@ unsigned short cksum(unsigned short *addr, int len)
 	return (answer);
 }
 
-char* getip()
+/*char* getip()
 {
 	char buffer[256];
 	struct hostent* h;
@@ -49,8 +52,29 @@ char* getip()
 	gethostname(buffer, 256);
 	h = gethostbyname(buffer);
 	return inet_ntoa(*(struct in_addr *)h->h_addr);
-}
+}*/
 
+
+char* getip()
+{
+	 int fd;
+	 struct ifreq ifr;
+
+	 fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+	 /* I want to get an IPv4 IP address */
+	 ifr.ifr_addr.sa_family = AF_INET;
+
+	 /* I want IP address attached to "eth0" */
+	 strncpy(ifr.ifr_name, "eth0", IFNAMSIZ-1);
+
+	 ioctl(fd, SIOCGIFADDR, &ifr);
+
+	 close(fd);
+
+	 /* display result */
+	 return inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr);
+}
 
 int sockfd, sequence = 0, optval, addrlen;
 struct sockaddr_in dst_addr, src_addr;
@@ -69,11 +93,11 @@ void pinger()
 	ip->version = 4;
 	ip->tos = 0;
 	ip->tot_len = sizeof(struct iphdr) + sizeof(struct icmphdr);
-	ip->id = htons(0);
+	ip->id = htons(getpid());
 	ip->frag_off = 0;
 	ip->ttl = 64;
 	ip->protocol = IPPROTO_ICMP;
-	ip->saddr = inet_addr("10.0.2.15");
+	ip->saddr = src_addr.sin_addr.s_addr;
 	ip->daddr = dst_addr.sin_addr.s_addr;
 	ip->check = cksum((unsigned short *)ip, sizeof(struct iphdr));
 	
@@ -112,7 +136,7 @@ int ping( char * dst )
 	setsockopt(sockfd, SOL_SOCKET, SO_SNDTIMEO, (char*)&timeout, sizeof(timeout));
 	setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,(char*)&timeout, sizeof(timeout));
 	
-	printf("Localhost - %s\n", inet_ntoa(dst_addr.sin_addr));
+	printf("Localhost - %s\n", getip());
 	
 	signal(SIGALRM, clock_handler);
 	buffer = malloc(sizeof(struct iphdr) + sizeof(struct icmphdr));
@@ -129,7 +153,7 @@ int ping( char * dst )
 		{
 			ip_reply = (struct iphdr*) buffer;
 			icmp_reply = (struct icmphdr*)(buffer + sizeof(struct iphdr));
-			printf("%d bytes from %s: icmp_req = %d ", response , inet_ntoa(dst_addr.sin_addr), icmp_reply->un.echo.sequence);
+			printf("%d bytes from %s: icmp_req = %d ", response , inet_ntoa(src_addr.sin_addr), icmp_reply->un.echo.sequence);
 			printf("ID: %d ", ntohs(ip_reply->id));
 			printf("TTL: %d\n", ip_reply->ttl);
 			

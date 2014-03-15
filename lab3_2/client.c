@@ -1,5 +1,4 @@
- 
-#include <stdio.h>
+ #include <stdio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -40,10 +39,15 @@ int main(int argc, char*argv[])
   sock_in.sin_port = htons(atoi(argv[1])); /* port number */
   sock_in.sin_family = PF_INET;
 
-  sprintf(buffer, "Ciao");
+  
+  sprintf(buffer, argv[2]);
   buflen = strlen(buffer);
-  status = sendto(sock, buffer, buflen, 0, (struct sockaddr *)&sock_in, sinlen);
-  printf("sendto Status = %d\n", status);
+  
+  while(1)
+  {
+    status = sendto(sock, buffer, buflen, 0, (struct sockaddr *)&sock_in, sinlen);
+    printf("sendto Status = %d - %s\n", status, buffer);
+  }
 
   shutdown(sock, 2);
   close(sock);

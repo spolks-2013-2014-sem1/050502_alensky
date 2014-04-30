@@ -32,6 +32,7 @@ int kbhit(void)
   struct termios oldt, newt;
   int ch;
   int oldf;
+  unsigned sinlen_wr = sizeof(struct sockaddr_in);
  
   tcgetattr(STDIN_FILENO, &oldt);
   newt = oldt;
@@ -49,7 +50,7 @@ int kbhit(void)
   {
     if( ch == '-')
     {
-	  status = sendto(sock_wr, ip, strlen(ip), 0, (struct sockaddr *)&sock_in_wr, sinlen_wr);
+	  sendto(sock_wr, ip, strlen(ip), 0, (struct sockaddr *)&sock_in_wr, sinlen_wr);
       return MULTI_ECHO;
     }
     else{
@@ -85,6 +86,7 @@ void listen_thread( void *arg )
 	char buffer_rd[MAXBUF];
 	int  buflen_rd, status;
 	unsigned sinlen_rd = sizeof(struct sockaddr_in);
+	unsigned sinlen_wr = sizeof(struct sockaddr_in);
 	
 	while(1)
 	{
@@ -121,15 +123,12 @@ void speak_thread( void *arg )
 	}
 }
 
-char* get_broadcast( char* name )
+char* get_mltcst_intfc()
 {
 	struct ifaddrs *ifaddr, *ifa;
-	int family, s, n;
-	char host[NI_MAXHOST];
+	int n;
 
-	getstatus = sendto(sock_wr, buffer_wr, buflen_wr, 0, (struct sockaddr *)&sock_in_wr, sinlen_wr);
-
-	if (ifaddrs(&ifaddr) == -1) 
+	if (getifaddrs(&ifaddr) == -1) 
 	{
 		perror("getifaddrs");
 		exit(-1);
@@ -141,10 +140,10 @@ char* get_broadcast( char* name )
 		if (ifa->ifa_addr == NULL)
 			continue;
 
-		if (strcmp(ifa->ifa_name, name)!=0)
-			continue;
-		
-		return inet_ntoa ((( struct sockaddr_in*)ifa->ifa_broadaddr)->sin_addr);
+		if (ifa->ifa_addr->sa_family == AF_INET && (ifa->ifa_flags & IFF_MULTICAST ))
+		{
+			return inet_ntoa ((( struct sockaddr_in*)ifa->ifa_addr)->sin_addr);
+		}
 	}
            
 	return NULL;
@@ -156,6 +155,9 @@ int main( int argc, char** argv)
   int yes = 1, port = 0, status = 0, arg, reuse = 1;
   pthread_t tid[2];
   
+  char *interface = get_mltcst_intfc();
+  printf("%s", interface);
+  
   sinlen_wr = sizeof(struct sockaddr_in);
   memset(&sock_in_wr, 0, sinlen_wr);
 
@@ -165,27 +167,27 @@ int main( int argc, char** argv)
   sock_rd = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP);
   sock_wr = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP);
   
-  localInterface.s_addr = inet_addr("203.106.93.94"); // or INADDR_ANY to use DEFAULT interface
+  localInterface.s_addr = inet_addr(interface); // or INADDR_ANY to use DEFAULT interface
   
-  group.imr_multiaddr.s_addr = inet_addr("226.1.1.1");
-  group.imr_interface.s_addr = inet_addr("203.106.93.94"); // or INADDR_ANY to use DEFAULT interface
+  group.imr_multiaddr.s_addr = inet_addr(argv[1]);
+  group.imr_interface.s_addr = inet_addr(interface); // or INADDR_ANY to use DEFAULT interface
 
   setsockopt(sock_rd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse));
   setsockopt(sock_wr, IPPROTO_IP, IP_MULTICAST_IF, (char *)&localInterface, sizeof(localInterface));
   setsockopt(sock_wr, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse));
   
   sock_in_wr.sin_family = AF_INET;
-  sock_in_wr.sin_addr.s_addr = inet_addr("226.1.1.1");
-  sock_in_wr.sin_port = htons(4321);
+  sock_in_wr.sin_addr.s_addr = inet_addr(argv[1]);
+  sock_in_wr.sin_port = htons(atoi(argv[2]));
   
   sock_in_rd.sin_family = AF_INET;
-  sock_in_rd.sin_port = htons(4321);
+  sock_in_rd.sin_port = htons(atoi(argv[2]));
   sock_in_rd.sin_addr.s_addr = INADDR_ANY;
   
   if(bind(sock_rd, (struct sockaddr*)&sock_in_rd, sizeof(sock_in_rd)))
   {
     perror("Binding datagram socket error");
-    close(sd);
+    close(sock_rd);
     exit(1);
   }
   

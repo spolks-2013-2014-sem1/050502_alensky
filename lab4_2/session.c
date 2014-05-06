@@ -25,7 +25,7 @@ struct in_addr localInterface;
 struct ip_mreq group;
 int sock_rd, sock_wr;
 struct sockaddr_in sock_in_rd, sock_in_wr;
-char *echo = "*_ECHO", ip;
+char *echo = "*_ECHO", *ip;
 
 int kbhit(void)
 {
@@ -156,7 +156,7 @@ int main( int argc, char** argv)
   pthread_t tid[2];
   
   char *interface = get_mltcst_intfc();
-  printf("%s", interface);
+  printf("Multicast interface: %s\n", interface);
   
   sinlen_wr = sizeof(struct sockaddr_in);
   memset(&sock_in_wr, 0, sinlen_wr);

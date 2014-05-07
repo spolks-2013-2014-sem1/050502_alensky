@@ -25,7 +25,8 @@ void masterInitMemory() {
 }
 
 void masterInitMatrix() {
-    for (int i = 0; i < N * N; i++) {
+  int i;
+    for (i = 0; i < N * N; i++) {
         A[i] = rand() % MAX_VALUE;
         B[i] = rand() % MAX_VALUE;
         C[i] = 0.0;
@@ -34,9 +35,12 @@ void masterInitMatrix() {
 }
 
 void masterCalculateOnSelf() {
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            for (int k = 0; k < N; k++) {
+  int i;
+  int j;
+  int k;
+    for (i = 0; i < N; i++) {
+        for ( j = 0; j < N; j++) {
+            for ( k = 0; k < N; k++) {
                 C_self[i * N + j] += A[i * N + k] * B[j * N + k];
             }
         }
@@ -45,7 +49,8 @@ void masterCalculateOnSelf() {
 
 void masterValidateResults() {
     long errors = 0;
-    for (int i = 0; i < N * N; i++) {
+    int i;
+    for ( i = 0; i < N * N; i++) {
         if (fabs(1.0 - (C[i] / C_self[i])) > MAX_ERROR)
             errors++;
     }
@@ -65,7 +70,8 @@ void masterCalculateOnSlaves() {
     MPI_Bcast(B, N*N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     if (async == 0) {
-        for (int i = 0; i < workers_count; i++) {
+      int i;
+        for ( i = 0; i < workers_count; i++) {
             int current_worker_block_size = block_size;
             if (i == workers_count - 1)
                 current_worker_block_size = last_worker_block_size;
@@ -76,7 +82,8 @@ void masterCalculateOnSlaves() {
 
         MPI_Request *requests = calloc(workers_count, sizeof(MPI_Request));
         MPI_Status *statuses = calloc(workers_count, sizeof(MPI_Status));
-        for (int i = 0; i < workers_count; i++) {
+	int i;
+        for ( i = 0; i < workers_count; i++) {
             int current_worker_block_size = block_size;
             if (i == workers_count - 1)
                 current_worker_block_size = last_worker_block_size;
@@ -89,7 +96,8 @@ void masterCalculateOnSlaves() {
 
 
     if (async == 0) {
-        for (int i = 0; i < workers_count; i++) {
+      int i;
+        for ( i = 0; i < workers_count; i++) {
             int current_worker_block_size = block_size;
             if (i == workers_count - 1)
                 current_worker_block_size = last_worker_block_size;
@@ -98,7 +106,8 @@ void masterCalculateOnSlaves() {
     } else {
         MPI_Request *requests = calloc(workers_count, sizeof(MPI_Request));
         MPI_Status *statuses = calloc(workers_count, sizeof(MPI_Status));
-        for (int i = 0; i < workers_count; i++) {
+       int i;
+	for ( i = 0; i < workers_count; i++) {
             int current_worker_block_size = block_size;
             if (i == workers_count - 1)
                 current_worker_block_size = last_worker_block_size;
@@ -110,7 +119,8 @@ void masterCalculateOnSlaves() {
     }
 
     if (async == 0) {
-        for (int i = 0; i < workers_count; i++) {
+      int i;
+        for ( i = 0; i < workers_count; i++) {
             int current_worker_block_size = block_size;
             if (i == workers_count - 1)
                 current_worker_block_size = last_worker_block_size;
@@ -119,7 +129,8 @@ void masterCalculateOnSlaves() {
     } else {
         MPI_Request *requests = calloc(workers_count, sizeof(MPI_Request));
         MPI_Status *statuses = calloc(workers_count, sizeof(MPI_Status));
-        for (int i = 0; i < workers_count; i++) {
+        int i;
+	for ( i = 0; i < workers_count; i++) {
             int current_worker_block_size = block_size;
             if (i == workers_count - 1)
                 current_worker_block_size = last_worker_block_size;
@@ -158,9 +169,10 @@ void slaveCalculateBlock() {
         MPI_Irecv(A, block_size * N, MPI_DOUBLE, 0, TAG_MATRIX_FIRST, MPI_COMM_WORLD, &request);
         MPI_Wait(&request, &status);
     }
-    for (int i = 0; i < block_size; i++) {
-        for (int j = 0; j < N; j++) {
-            for (int k = 0; k < N; k++) {
+    int i,j,k;
+    for ( i = 0; i < block_size; i++) {
+        for ( j = 0; j < N; j++) {
+            for ( k = 0; k < N; k++) {
                 C[i * N + j] += A[i * N + k] * B[j * N + k];
             }
         }

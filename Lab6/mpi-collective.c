@@ -30,17 +30,20 @@ void groupsPrepare() {
     if (global_rank == 0) {
         int available_ranks = global_size - groups_count;
         int next_group_rank = 0;
-        for (int i = 0; i < groups_count; i++) {
+        int i;
+	for (i = 0; i < groups_count; i++) {
             if (i != groups_count - 1) {
                 int random_group_modifier = rand() % (available_ranks * 2 / 3);
                 available_ranks -= random_group_modifier;
                 int random_group_size = 1 + random_group_modifier;
-                for (int j = 0; j < random_group_size; j++) {
+                int j;
+		for (j = 0; j < random_group_size; j++) {
                     group_numbers[next_group_rank + j] = i;
                 }
                 next_group_rank += random_group_size;
             } else {
-                for (int j = next_group_rank; j < global_size; j++) {
+	      int j;
+                for (j = next_group_rank; j < global_size; j++) {
                     group_numbers[j] = groups_count - 1;
                 }
             }
@@ -57,7 +60,8 @@ void groupsPrepare() {
 void groupsFinalize() {
 
     double sum = 0;
-    for (int i = 0; i < N * N - 1; i++) {
+    int i;
+    for (i= 0; i < N * N - 1; i++) {
         sum += C_result[i];
     }
     printf("Group size: %d. Sum is %0.0lf. Time is %lf.\n", group_size, sum, end_time - start_time);
@@ -73,9 +77,12 @@ void prepareCalculate() {
 }
 
 void scatterCalculateBlock() {
-    for (int i = 0; i < scatter_size; i += N) {
-        for (int j = 0; j < N; j++) {
-            for (int k = 0; k < N; k++) {
+  int i;
+int j;
+int k;
+  for ( i = 0; i < scatter_size; i += N) {
+        for ( j = 0; j < N; j++) {
+            for ( k = 0; k < N; k++) {
                 C_block[i + j] += A_block[i + k] * B[j * N + k];
             }
         }
@@ -87,8 +94,10 @@ void saveBlockToFile() {
     sprintf(rank, "%d", group_number);
 
     FILE * file = fopen(strcat(rank, ".txt\n"), "a");
-    for (int i = 0; i < scatter_size; i += N) {
-        for (int j = 0; j < N; j++) {
+    int i;
+    int j;
+    for ( i = 0; i < scatter_size; i += N) {
+        for ( j = 0; j < N; j++) {
             fprintf(file, "%d : %f\n", global_rank, C_block[i + j]);
         }
     }
@@ -102,7 +111,8 @@ void scatterCalculate() {
 
         int worker_scatter_size = N / group_size;
         int last_worker_scatter_size = N - (group_size - 1) * worker_scatter_size;
-        for (int i = 0; i < group_size; i++) {
+        int i;
+	for (i = 0; i < group_size; i++) {
             group_scatter_sizes[i] = (i == group_size - 1 ? last_worker_scatter_size : worker_scatter_size) * N;
             group_scatter_displacements[i] = i == 0 ? 0 : group_scatter_displacements[i - 1] + group_scatter_sizes[i - 1];
             //printf("Calculated group %d rank %d : size %7d disp %7d\n", group_number, i, group_scatter_sizes[i], group_scatter_displacements[i]);
@@ -131,7 +141,8 @@ void masterInitMatrix() {
     int a;
     int b;
 
-    for (int i = 0; i < N * N; i++) {
+    int i;
+    for ( i = 0; i < N * N; i++) {
         // A[i] = rand() % MAX_VALUE;
         // B[i] = rand() % MAX_VALUE;
         fscanf(fileA, "%d", &a); A[i] = a;

@@ -50,7 +50,7 @@ int kbhit(void)
   {
     if( ch == '-')
     {
-	  sendto(sock_wr, ip, strlen(ip), 0, (struct sockaddr *)&sock_in_wr, sinlen_wr);
+	  sendto(sock_wr, echo, strlen(echo), 0, (struct sockaddr *)&sock_in_wr, sinlen_wr);
       return MULTI_ECHO;
     }
     else{
